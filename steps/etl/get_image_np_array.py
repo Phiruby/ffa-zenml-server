@@ -9,9 +9,12 @@ import os
 from PIL import Image
 import numpy as np 
 
-def get_training_np_array(food_data_path: str) -> Annotated[pd.DataFrame, "training_data"]:
+def get_batch_np_array(food_data_path: str) -> Annotated[pd.DataFrame, "image_np_array"]:
     '''
     Returns the training data as a pd Dataframe of np array.
+    ---
+    Args
+        food_data_path: str - The path that consist of all images to convert to np array
     ---
     Returns
         A pandas DataFrame containing the training data.
@@ -19,7 +22,7 @@ def get_training_np_array(food_data_path: str) -> Annotated[pd.DataFrame, "train
             labels: list of int, where the int is the label of the image
     '''
     # get the training path
-    training_images_path = food_data_path + "/training"
+    training_images_path = food_data_path
     # loop through all images in training_images_path and get their corresponding np array
     images_list = []
     labels_list = []

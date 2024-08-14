@@ -9,7 +9,13 @@ from zenml.logger import get_logger
 
 logger = get_logger(__name__)
 @step
-def download_images(path: str = "../../data") -> Annotated[str, "images_path"]:
+def download_images(
+    path: str = "../../data"
+    ) -> Tuple[
+            Annotated[str, "training_path"],
+            Annotated[str, "test_path"],
+            Annotated[str, "validation_path"]
+        ]:
     '''
     Downloads the Foods-5k dataset from Kaggle into the specified path.
     ---
@@ -27,4 +33,4 @@ def download_images(path: str = "../../data") -> Annotated[str, "images_path"]:
     else:
         logger.info("food5k dataset already exists. Skipping download.")
     # kaggle datasets download -d binhminhs10/food5k
-    return dataset_path
+    return dataset_path+'/training', dataset_path+'/evaluation', dataset_path+'/validation'

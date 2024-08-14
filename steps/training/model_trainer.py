@@ -43,7 +43,7 @@ def model_trainer(
         name=model_name,
     )
 
-     # keep track of mlflow version for future use
+    # add to mlflow metadata
     model_registry = Client().active_stack.model_registry
     if model_registry:
         version = model_registry.get_latest_model_version(name=model_name, stage=None)
