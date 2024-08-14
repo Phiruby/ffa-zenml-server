@@ -18,7 +18,7 @@ if not experiment_tracker or not isinstance(
     experiment_tracker, MLFlowExperimentTracker
 ):
     raise RuntimeError(
-        "Have you configured an MLflow experiment tracker in your stack? Seems like you haven't."
+        "Have you configured an MLflow experiment tracker in your stack? Seems like you haven't. Check out https://docs.zenml.io/stack-components/experiment-trackers/mlflow"
     )
 
 @step(experiment_tracker=experiment_tracker.name) 
@@ -27,7 +27,7 @@ def model_trainer(
     model: ClassifierMixin,
     target_col: str,
     model_name: str
-) -> Annotated[ClassifierMixin, ArtifactConfig("model", is_model_artifact=True)]:
+) -> Annotated[ClassifierMixin, ArtifactConfig(name="model", is_model_artifact=True)]:
     """Trains a model using the specified algorithm and saves the model to disk."""
     logger.info("Starting model training process...")
 

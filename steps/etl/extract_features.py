@@ -1,14 +1,33 @@
+from typing import Dict, Tuple
 from zenml import step
 from torchvision import models, transforms
 from typing_extensions import Annotated
 from PIL import Image
 import torch
 import pandas as pd
+from zenml.logger import get_logger
 
-@step
-def feature_extractor_step(images_np_arrays: pd.Series) -> Annotated[pd.Series, "features"]:
+logger = get_logger(__name__)
+@step(enable_cache=True)
+def feature_extractor_step(
+    train_images_np_arrays: pd.DataFrame,
+    test_images_np_arrays: pd.DataFrame
+    ) -> Tuple[
+        Annotated[pd.Series, "train_features"],
+        Annotated[pd.Series, "test_features"]
+        ]:
     """Extract features from images using a pre-trained model."""
     
+    logger.info("Starting Feature Extraction...")
+    train_images_np_arrays = train_images_np_arrays["images"]
+    test_images_np_arrays = test_images_np_arrays["images"]
+
+    train_feature_series = get_feature_series(train_images_np_arrays)
+    test_feature_series = get_feature_series(test_images_np_arrays)
+
+    return train_feature_series, test_feature_series
+
+def get_feature_series(images_np_arrays: pd.DataFrame) -> pd.Series:
     # Load a pre-trained ResNet model without the final classification layer
     model = models.resnet50(pretrained=True)
     model = torch.nn.Sequential(*list(model.children())[:-1])
@@ -23,7 +42,8 @@ def feature_extractor_step(images_np_arrays: pd.Series) -> Annotated[pd.Series, 
     ])
 
     features = []
-    for image_np in images_np_arrays:
+    for idx, image_np in enumerate(images_np_arrays):
+        logger.info(f"Extracting feature {idx+1}/{len(images_np_arrays)} ({(idx+1)/len(images_np_arrays)*100:.2f}%)")
         input_tensor = preprocess(image_np).unsqueeze(0)
         with torch.no_grad():
             feature = model(input_tensor).flatten().numpy()

@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import RandomizedSearchCV
-from utils import get_model_from_config
+from utils.get_model_from_config import get_model_from_config
 from zenml import log_artifact_metadata, step
 from zenml.logger import get_logger
 
