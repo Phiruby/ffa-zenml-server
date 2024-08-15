@@ -8,6 +8,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from utils.get_model_from_config import get_model_from_config
 from zenml import log_artifact_metadata, step
 from zenml.logger import get_logger
+import numpy as np 
 
 logger = get_logger(__name__)
 
@@ -59,9 +60,18 @@ def hp_tuning_single_search(
     y_trn = dataset_trn[target]
     X_tst = dataset_tst.drop(columns=[target])
     y_tst = dataset_tst[target]
+
+    X_trn_flattened = np.vstack(X_trn["images"].values)  # Shape: (n_samples, 2048)
+    X_tst_flattened = np.vstack(X_tst["images"].values)
+
+    X_trn = X_trn_flattened
+    X_tst = X_tst_flattened
+
     logger.info("Running Hyperparameter tuning...")
+    logger.info("X_train shape: "+str(X_trn.shape))
+    logger.info("y_train shape: "+str(y_trn.shape))
     cv = RandomizedSearchCV(
-        estimator=model_class(),
+        estimator=model_class(max_iter=200),
         param_distributions=search_grid,
         cv=3,
         n_jobs=-1,
@@ -70,7 +80,10 @@ def hp_tuning_single_search(
         scoring="accuracy",
         refit=True,
     )
+    
+
     cv.fit(X=X_trn, y=y_trn)
+    logger.info("Finished Fitting Randomized Search CV...")
     y_pred = cv.predict(X_tst)
     score = accuracy_score(y_tst, y_pred)
     # log score along with output artifact as metadata

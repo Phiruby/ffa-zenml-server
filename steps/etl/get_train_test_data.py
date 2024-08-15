@@ -33,11 +33,16 @@ def get_train_test_data(
         test_image_labels = test_file["labels"]
 
     logger.info("Loaded train and test images uri before getting training and testing data with extracted features...")
+    logger.info("Feature shapes are: %s, %s", str(training_features.values.shape), str(test_features.values.shape))
+    logger.info("Sample feature shapes for train and test data: %s, %s", str(len(training_features.values[0])),
+                 str(len(test_features.values[0])))
     train_labels, test_labels = train_image_labels, test_image_labels
     logger.info("Converting training data to pd dataframe...")
 
-    training_data = pd.DataFrame({"images": training_features, "labels": train_labels})
+    training_data = pd.DataFrame({"images": training_features.values, "labels": train_labels})
     
     logger.info("Converting testing data to pd dataframe...")
-    testing_data = pd.DataFrame({"images": test_features, "labels": test_labels})
+    testing_data = pd.DataFrame({"images": test_features.values, "labels": test_labels})
+
+    logger.info("Sample data frame shape of feature: "+str(len(training_data["images"][0])))
     return training_data, testing_data

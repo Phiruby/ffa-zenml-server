@@ -30,12 +30,12 @@ def feature_extractor_step(
 
 
     logger.info("Getting feature series now...")
-    train_feature_series = get_feature_series(train_images_np_arrays)
     test_feature_series = get_feature_series(test_images_np_arrays)
+    train_feature_series = get_feature_series(train_images_np_arrays)
 
     return train_feature_series, test_feature_series
 
-def get_feature_series(images_np_arrays: pd.DataFrame) -> pd.Series:
+def get_feature_series(images_np_arrays: np.ndarray) -> pd.Series:
     # Load a pre-trained ResNet model without the final classification layer
     model = models.resnet50(pretrained=True)
     model = torch.nn.Sequential(*list(model.children())[:-1])
@@ -64,7 +64,10 @@ def get_feature_series(images_np_arrays: pd.DataFrame) -> pd.Series:
         # logger.info("Appending the feature")
         features.append(feature.flatten())
 
+    logger.info("Sample shape of the features: %s", str(features[0].shape)+", "+str(features[1].shape))
+    logger.info("Final shape of the features: %s", str((len(features), len(features[0]))))
     # Convert features to DataFrame
     feature_df = pd.Series(features)
     
+    logger.info("Returning feature series... Shape of the series is %s", str(feature_df.shape))
     return feature_df
