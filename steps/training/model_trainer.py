@@ -33,6 +33,7 @@ def model_trainer(
 
     mlflow.sklearn.autolog()
 
+
     model.fit(
         dataset.drop(columns=[target_col]),
         dataset[target_col],

@@ -22,14 +22,14 @@ def feature_extractor_step(
 
     logger.info("Reading from the URI before extracting features...")
     with fileio.open(train_images_path, 'rb') as f:
-        train_images_np_arrays = np.load(f)
+        train_images_np_arrays = np.load(f, allow_pickle=True)["images"]
     with fileio.open(test_images_path, 'rb') as f:
-        test_images_np_arrays = np.load(f)
+        test_images_np_arrays = np.load(f, allow_pickle=True)["images"]
     
     logger.info("Starting Feature Extraction...")
-    train_images_np_arrays = train_images_np_arrays["images"]
-    test_images_np_arrays = test_images_np_arrays["images"]
 
+
+    logger.info("Getting feature series now...")
     train_feature_series = get_feature_series(train_images_np_arrays)
     test_feature_series = get_feature_series(test_images_np_arrays)
 
@@ -43,19 +43,26 @@ def get_feature_series(images_np_arrays: pd.DataFrame) -> pd.Series:
 
     # Define image transformations
     preprocess = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Resize((224, 224)),  # Resize directly to the input size
+        transforms.ToTensor(),  # Convert the image to a tensor
     ])
 
     features = []
     for idx, image_np in enumerate(images_np_arrays):
-        logger.info(f"Extracting feature {idx+1}/{len(images_np_arrays)} ({(idx+1)/len(images_np_arrays)*100:.2f}%)")
-        input_tensor = preprocess(image_np).unsqueeze(0)
+        if idx % 100 == 0:
+            logger.info(f"Extracting feature {idx+1}/{len(images_np_arrays)} ({(idx+1)/len(images_np_arrays)*100:.2f}%)")
+
+        image_pil = Image.fromarray(image_np)
+        # logger.info("Converted image to PIL array")
+
+        input_tensor = preprocess(image_pil).unsqueeze(0)
+
+        # logger.info("Preprocessed image to get the features")
         with torch.no_grad():
             feature = model(input_tensor).flatten().numpy()
-        features.append(feature)
+        
+        # logger.info("Appending the feature")
+        features.append(feature.flatten())
 
     # Convert features to DataFrame
     feature_df = pd.Series(features)

@@ -46,41 +46,39 @@ def get_image_batch_np_array(
     np.savez(train_path, images=train_df['images'].values, labels=train_df['labels'].values)
     np.savez(test_path, images=test_df['images'].values, labels=test_df['labels'].values)
 
-    return train_path, test_path
+    return train_path+'.npz', test_path+'.npz'
     
 
-def convert_to_np_array(images_folder_path: str) -> Annotated[dict, "image_np_array"]:
+def convert_to_np_array(images_folder_path: str) -> pd.DataFrame:
     '''
-    Returns the training data as a pd Dataframe of np array.
+    Returns the training data as a pd DataFrame of np arrays.
     ---
-    Args
-        food_data_path: str - The path that consist of all images to convert to np array
+    Args:
+        images_folder_path: str - The path that consists of all images to convert to np arrays.
     ---
-    Returns
-        A pandas DataFrame containing the training data.
-            images: list of np.array, where the np,array is the image (the np.array is flattened)
-            labels: list of int, where the int is the label of the image
+    Returns:
+        A pandas DataFrame containing the image data:
+            images: list of np.array, where each array represents the RGB image (height, width, channels)
+            labels: list of int, where each int is the label of the image
     '''
-    # get the training path
     logger.info("Getting image np arrays from path "+str(images_folder_path)+"...")
-    
+
     images_list = []
     labels_list = []
     num_files = len(os.listdir(images_folder_path))
     for idx, filename in enumerate(os.listdir(images_folder_path)):
         if idx % 200 == 0:
             logger.info(f"Converting image {idx+1}/{num_files} ({(idx+1)/num_files*100:.2f}%): {filename}")
-        img = Image.open(os.path.join(images_folder_path, filename))
-        img_np = np.array(img)
-        img_np = img_np.flatten()
+        img = Image.open(os.path.join(images_folder_path, filename)).convert('RGB')
+        img_np = np.array(img)  # Preserve the RGB channels
         images_list.append(img_np)
-        # for each image, add a label
+        
+        # Assign a label based on filename
         if filename.startswith('0'):
             labels_list.append(0)
         elif filename.startswith('1'):
             labels_list.append(1)
     
-    # create a pandas dataframe
+    # Create a pandas DataFrame
     df = pd.DataFrame({"images": images_list, "labels": labels_list})
     return df
-

@@ -51,7 +51,8 @@ def training_pipeline():
         "sklearn.linear_model",
         "LogisticRegression",
         search_grid={
-            "penalty": ["l2", "l1", "elasticnet"]
+            "penalty": ["l2", "l1"],
+            "solver": ["saga"]
         },
         dataset_trn=training_data,
         dataset_tst=testing_data,

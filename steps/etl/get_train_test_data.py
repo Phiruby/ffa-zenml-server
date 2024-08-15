@@ -9,6 +9,7 @@ from zenml import step
 import os
 from PIL import Image
 import numpy as np 
+from zenml.io import fileio
 
 logger = get_logger(__name__)
 
@@ -21,11 +22,18 @@ def get_train_test_data(
     ) -> Tuple[Annotated[pd.DataFrame, "train_data"], Annotated[pd.DataFrame, "test_data"]]:
     
     logger.info("Reading train and test images uri before getting training and testing data with extracted features...")
-    train_image_batch = np.load(train_image_batch_uri)
-    test_image_batch = np.load(test_image_batch_uri)
+    with fileio.open(train_image_batch_uri, 'rb') as f:
+        train_file = np.load(train_image_batch_uri, allow_pickle=True)
+        train_image_batch = train_file["images"]
+        train_image_labels = train_file["labels"]
+    
+    with fileio.open(test_image_batch_uri, 'rb') as f:
+        test_file = np.load(test_image_batch_uri, allow_pickle=True)
+        test_image_batch = test_file["images"]
+        test_image_labels = test_file["labels"]
 
     logger.info("Loaded train and test images uri before getting training and testing data with extracted features...")
-    train_labels, test_labels = train_image_batch["labels"], test_image_batch["labels"]
+    train_labels, test_labels = train_image_labels, test_image_labels
     logger.info("Converting training data to pd dataframe...")
 
     training_data = pd.DataFrame({"images": training_features, "labels": train_labels})
