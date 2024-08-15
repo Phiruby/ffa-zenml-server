@@ -6,17 +6,25 @@ from PIL import Image
 import torch
 import pandas as pd
 from zenml.logger import get_logger
+import numpy as np 
+from zenml.io import fileio
 
 logger = get_logger(__name__)
 @step(enable_cache=True)
 def feature_extractor_step(
-    train_images_np_arrays: pd.DataFrame,
-    test_images_np_arrays: pd.DataFrame
+    train_images_path: str,
+    test_images_path: str
     ) -> Tuple[
         Annotated[pd.Series, "train_features"],
         Annotated[pd.Series, "test_features"]
         ]:
     """Extract features from images using a pre-trained model."""
+
+    logger.info("Reading from the URI before extracting features...")
+    with fileio.open(train_images_path, 'rb') as f:
+        train_images_np_arrays = np.load(f)
+    with fileio.open(test_images_path, 'rb') as f:
+        test_images_np_arrays = np.load(f)
     
     logger.info("Starting Feature Extraction...")
     train_images_np_arrays = train_images_np_arrays["images"]

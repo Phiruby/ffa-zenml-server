@@ -16,10 +16,15 @@ logger = get_logger(__name__)
 def get_train_test_data(
     training_features: pd.Series,
     test_features: pd.Series, 
-    train_image_batch: pd.DataFrame,
-    test_image_batch: pd.DataFrame
+    train_image_batch_uri: str,
+    test_image_batch_uri: str
     ) -> Tuple[Annotated[pd.DataFrame, "train_data"], Annotated[pd.DataFrame, "test_data"]]:
     
+    logger.info("Reading train and test images uri before getting training and testing data with extracted features...")
+    train_image_batch = np.load(train_image_batch_uri)
+    test_image_batch = np.load(test_image_batch_uri)
+
+    logger.info("Loaded train and test images uri before getting training and testing data with extracted features...")
     train_labels, test_labels = train_image_batch["labels"], test_image_batch["labels"]
     logger.info("Converting training data to pd dataframe...")
 

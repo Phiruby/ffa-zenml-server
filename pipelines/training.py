@@ -31,21 +31,20 @@ logger = get_logger(__name__)
 @pipeline
 def training_pipeline():
     # --- ETL --- #
-    dataset_path = download_images(id="download_images")
+    dataset_path = download_images()
 
-    train_df, test_df = get_image_batch_np_array(dataset_path, id="get_np_data", after=["download_images"])
+    train_df_uri, test_df_uri = get_image_batch_np_array(dataset_path)
     # validation_images, validation_labels = get_image_batch_np_array(validation_path)
 
     # --- Feature Extractor --- #
     training_features, testing_features = feature_extractor_step(
-        train_df,
-        test_df,
-        after=["get_np_data"]
+        train_df_uri,
+        test_df_uri,
     )
     
     # training_data = pd.DataFrame({"images": training_features, "labels": training_data["labels"]})
     # testing_data = pd.DataFrame({"images": testing_features, "labels": testing_data["labels"]})
-    training_data, testing_data = get_train_test_data(training_features, testing_features, train_df, test_df)
+    training_data, testing_data = get_train_test_data(training_features, testing_features, train_df_uri, test_df_uri)
     # --- Hyperparameter Tuner --- #
     step_name = "hp_tuning_search"
     hp_tuning_single_search(

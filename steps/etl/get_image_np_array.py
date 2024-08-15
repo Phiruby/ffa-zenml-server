@@ -9,6 +9,7 @@ from zenml import step
 import os
 from PIL import Image
 import numpy as np 
+from zenml.materializers import PandasMaterializer
 
 logger = get_logger(__name__)
 
@@ -16,8 +17,8 @@ logger = get_logger(__name__)
 def get_image_batch_np_array(
     food_data_path: str
     ) -> Tuple[
-        Annotated[pd.DataFrame, "train_np_img"], 
-        Annotated[pd.DataFrame, "test_np_img"]
+        Annotated[str, "train_np_img"], 
+        Annotated[str, "test_np_img"]
         ]:
     '''
     Returns the training data as a pd Dataframe of np array.
@@ -26,9 +27,7 @@ def get_image_batch_np_array(
         food_data_path: str - The path to the food 5k dataset (should contain training and evaluation folders)
     ---
     Returns
-        A pandas DataFrame containing the training data.
-            images: list of np.array, where the np,array is the image (the np.array is flattened)
-            labels: list of int, where the int is the label of the image
+        A tuple of the training and test data as URIs (use np.load(uri.path) to load the data)
     '''
     # get the training path
     logger.info("Getting image np arrays from path "+str(food_data_path)+"...")
@@ -40,7 +39,14 @@ def get_image_batch_np_array(
     test_df = convert_to_np_array(testing_images_path)
     logger.info("Got image np arrays... Now returning train and test data frames")
     logger.info("Types are (train and test df respectively) "+str(type(train_df))+" And "+str(type(test_df)))
-    return train_df, test_df
+
+    train_path = os.path.join(food_data_path, "train_image_np_array")
+    test_path = os.path.join(food_data_path, "test_image_np_array")
+
+    np.savez(train_path, images=train_df['images'].values, labels=train_df['labels'].values)
+    np.savez(test_path, images=test_df['images'].values, labels=test_df['labels'].values)
+
+    return train_path, test_path
     
 
 def convert_to_np_array(images_folder_path: str) -> Annotated[dict, "image_np_array"]:
@@ -62,7 +68,7 @@ def convert_to_np_array(images_folder_path: str) -> Annotated[dict, "image_np_ar
     labels_list = []
     num_files = len(os.listdir(images_folder_path))
     for idx, filename in enumerate(os.listdir(images_folder_path)):
-        if idx % 50 == 0:
+        if idx % 200 == 0:
             logger.info(f"Converting image {idx+1}/{num_files} ({(idx+1)/num_files*100:.2f}%): {filename}")
         img = Image.open(os.path.join(images_folder_path, filename))
         img_np = np.array(img)
