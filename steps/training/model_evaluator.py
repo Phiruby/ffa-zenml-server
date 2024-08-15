@@ -7,6 +7,7 @@ from sklearn.base import ClassifierMixin
 from zenml import step
 from zenml.client import Client
 from zenml.logger import get_logger
+import numpy as np 
 
 logger = get_logger(__name__)
 
@@ -38,14 +39,20 @@ def model_evaluator(
         RuntimeError: if any of accuracies is lower than respective threshold
     """
     # get model accuracy on train and test
+    X_trn = np.vstack(dataset_trn["images"].values)  # Shape: (n_samples, n_features)
+    y_trn = dataset_trn[target]
+
+    X_tst = np.vstack(dataset_tst["images"].values)  # Shape: (n_samples, n_features)
+    y_tst = dataset_tst[target]
+
     trn_acc = model.score(
-        dataset_trn.drop(columns=[target]),
-        dataset_trn[target],
+        X_trn,
+        y_trn,
     )
     logger.info(f"Train accuracy={trn_acc*100:.2f}%")
     tst_acc = model.score(
-        dataset_tst.drop(columns=[target]),
-        dataset_tst[target],
+        X_tst,
+        y_tst,
     )
     logger.info(f"Test accuracy={tst_acc*100:.2f}%")
     mlflow.log_metric("testing_accuracy_score", tst_acc)

@@ -24,11 +24,15 @@ from steps.training.model_evaluator import model_evaluator
 from steps.promotion.promote_with_metrics import promote_with_metric_compare
 from steps.promotion.compute_performance_metrics import compute_performance_metrics_on_current_data
 
-from zenml import pipeline
+from zenml import Model, pipeline
 from zenml.logger import get_logger
 from zenml.artifacts.external_artifact import ExternalArtifact
 logger = get_logger(__name__)
-@pipeline
+@pipeline(model=Model(
+        name="food_preds",
+        license="Apache",
+        description="Show case Model Control Plane.",
+    ))
 def training_pipeline():
     # --- ETL --- #
     dataset_path = download_images()
@@ -47,7 +51,7 @@ def training_pipeline():
     training_data, testing_data = get_train_test_data(training_features, testing_features, train_df_uri, test_df_uri)
     # --- Hyperparameter Tuner --- #
     step_name = "hp_tuning_search"
-    hp_tuning_single_search(
+    best_model = hp_tuning_single_search(
         "sklearn.linear_model",
         "LogisticRegression",
         search_grid={
@@ -59,7 +63,7 @@ def training_pipeline():
         target="labels",
         id=step_name
     )
-    best_model = hp_tuning_select_best_model([step_name], after=[step_name])
+    # best_model = hp_tuning_select_best_model([step_name], after=[step_name])
 
     # --- Model Trainer --- #
     model = model_trainer(

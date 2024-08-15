@@ -8,7 +8,7 @@ from zenml.client import Client
 from zenml.integrations.mlflow.experiment_trackers import MLFlowExperimentTracker
 from zenml.integrations.mlflow.steps.mlflow_registry import mlflow_register_model_step
 from zenml.logger import get_logger
-
+import numpy as np 
 
 logger = get_logger(__name__)
 
@@ -21,7 +21,7 @@ if not experiment_tracker or not isinstance(
         "Have you configured an MLflow experiment tracker in your stack? Seems like you haven't. Check out https://docs.zenml.io/stack-components/experiment-trackers/mlflow"
     )
 
-@step(experiment_tracker=experiment_tracker.name) 
+@step(enable_cache=True, experiment_tracker=experiment_tracker.name) 
 def model_trainer(
     dataset: pd.DataFrame,
     model: ClassifierMixin,
@@ -33,11 +33,15 @@ def model_trainer(
 
     mlflow.sklearn.autolog()
 
+    logger.info("Flattening training data before fitting...")
+    X = np.vstack(dataset["images"].values)  # Shape: (n_samples, n_features)
+    y = dataset[target_col]
 
+    logger.info("Training model...")
     model.fit(
-        dataset.drop(columns=[target_col]),
-        dataset[target_col],
+        X, y
     )
+    logger.info("Finished training! Registering on MLFlow")
 
     mlflow_register_model_step.entrypoint(
         model,
@@ -49,7 +53,12 @@ def model_trainer(
     if model_registry:
         version = model_registry.get_latest_model_version(name=model_name, stage=None)
         if version:
-            model_ = get_step_context().model
-            model_.log_metadata({"model_registry_version": version.version})
+            try:
+                model_ = get_step_context().model
+                model_.log_metadata({"model_registry_version": version.version})
+                logger.info("MODEL VERSION IS: {}".format(version.version))
+            except Exception as e:
+                logger.warning(f"Failed to log metadata to MLFlow while training the model: {e}")
     
+    logger.info("Returning the model")
     return model
