@@ -21,7 +21,7 @@ if not experiment_tracker or not isinstance(
         "Have you configured an MLflow experiment tracker in your stack? Seems like you haven't. Check out https://docs.zenml.io/stack-components/experiment-trackers/mlflow"
     )
 
-@step(enable_cache=True, experiment_tracker=experiment_tracker.name) 
+@step(enable_cache=False, experiment_tracker=experiment_tracker.name) 
 def model_trainer(
     dataset: pd.DataFrame,
     model: ClassifierMixin,
@@ -56,6 +56,7 @@ def model_trainer(
             try:
                 model_ = get_step_context().model
                 model_.log_metadata({"model_registry_version": version.version})
+
                 logger.info("MODEL VERSION IS: {}".format(version.version))
             except Exception as e:
                 logger.warning(f"Failed to log metadata to MLFlow while training the model: {e}")

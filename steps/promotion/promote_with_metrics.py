@@ -73,6 +73,9 @@ def promote_with_metric_compare(
         model.set_stage(stage=target_env, force=True)
         logger.info(f"Current model version was promoted to '{target_env}'.")
 
+        logger.info("MODEL METADATA KEYS: " + str(latest_version.run_metadata.keys()))
+        logger.info("META DATA KEYS: " + str(model.run_metadata.keys()))
+
         # Promote in Model Registry
         latest_version_model_registry_number = latest_version.run_metadata["model_registry_version"].value
         if current_version_number is None:

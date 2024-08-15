@@ -1,7 +1,7 @@
 from typing import List, Optional, Any, Dict
 import random
 import pandas as pd 
-
+from zenml.enums import ModelStages
 # from steps import (
 #     download_images,
 #     get_image_batch_np_array,
@@ -29,7 +29,7 @@ from zenml.logger import get_logger
 from zenml.artifacts.external_artifact import ExternalArtifact
 logger = get_logger(__name__)
 @pipeline(model=Model(
-        name="food_preds",
+        name="train_food_pipeline",
         license="Apache",
         description="Show case Model Control Plane.",
     ))
@@ -92,5 +92,5 @@ def training_pipeline():
         latest_metric=latest_metric,
         current_metric=current_metric,
         mlflow_model_name="food_classifier_lr",
-        target_env="development",
+        target_env=ModelStages.STAGING,
     )

@@ -47,16 +47,23 @@ def compute_performance_metrics_on_current_data(
     latest_version_number = latest_version.number
     current_version_number = current_version.number
 
+    logger.info("Latest version name is "+str(latest_version.name)+" and number is "+str(latest_version_number)+
+                " and target env is "+str(target_env))
+
     if current_version_number is None:
         current_version_number = -1
         metrics = {latest_version_number:1.0,current_version_number:0.0}
     else:
         # Get predictors
         logger.info("Getting predictors...")
-        predictors = {
-            latest_version_number: latest_version.load_artifact("model"),
-            current_version_number: current_version.load_artifact("model"),
-        }
+        try:
+            predictors = {
+                latest_version_number: latest_version.load_artifact("model"),
+                current_version_number: current_version.load_artifact("model"),
+            }
+        except Exception as e:
+            logger.info(f"Could not load model artifacts in {target_env}. Exception: "+str(e))
+            return 0.0,0.0
         logger.info("Now computing metrics...")
 
         metrics = {}
