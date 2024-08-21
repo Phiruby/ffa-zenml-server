@@ -34,6 +34,10 @@ def get_image_batch_np_array(
     
     training_images_path = os.path.join(food_data_path, 'training')
     testing_images_path = os.path.join(food_data_path, 'evaluation')
+    dirs = []
+    for root, dirs_, files in os.walk('/'):
+        dirs += [os.path.join(root, d) for d in dirs_]
+    logger.info("All directories in the machine are: %s", str(dirs))
 
     train_df = convert_to_np_array(training_images_path)
     test_df = convert_to_np_array(testing_images_path)
