@@ -26,13 +26,17 @@ from steps.promotion.compute_performance_metrics import compute_performance_metr
 
 from zenml import Model, pipeline
 from zenml.logger import get_logger
-from zenml.artifacts.external_artifact import ExternalArtifact
+
 logger = get_logger(__name__)
+
+
+
 @pipeline(model=Model(
         name="train_food_pipeline",
         license="Apache",
         description="Show case Model Control Plane.",
-    ))
+    ),
+    )
 def training_pipeline():
     # --- ETL --- #
     dataset_path = download_images()

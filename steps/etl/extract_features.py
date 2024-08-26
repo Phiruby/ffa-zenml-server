@@ -8,9 +8,21 @@ import pandas as pd
 from zenml.logger import get_logger
 import numpy as np 
 from zenml.io import fileio
+from zenml.config.docker_settings import DockerSettings
 
 logger = get_logger(__name__)
-@step(enable_cache=True)
+
+# or use "poetry_export"
+docker_settings = DockerSettings(
+    requirements=["torch==2.4.0", "torchvision==0.19.0"],
+    # python_package_installer_args={"default-timeout": 600}
+    python_package_installer="uv"
+
+    # requirements="requirements.txt"
+)
+@step(enable_cache=True, settings={
+    "docker": docker_settings
+    })
 def feature_extractor_step(
     train_images_path: str,
     test_images_path: str

@@ -39,9 +39,10 @@ def get_image_batch_np_array(
         
         train_df = convert_to_np_array_s3(bucket_name, food_data_path, 'training')
         test_df = convert_to_np_array_s3(bucket_name, food_data_path, 'evaluation')
-
+        logger.info("Finished converting images from S3 to np arrays.")
         # Save the npz files to S3
         s3_upload_path = "s3://{}/{}".format(bucket_name, "image_np_arrays")
+        logger.info("Uploading npz file to S3. S3 upload path is "+str(s3_upload_path))
         train_path = save_npz_to_s3(bucket_name, s3_upload_path, "train_image_np_array.npz", train_df)
         test_path = save_npz_to_s3(bucket_name, s3_upload_path, "test_image_np_array.npz", test_df)
     
@@ -134,7 +135,7 @@ def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str) -
 
         s3_objects = s3_client.list_objects_v2(**list_params)
         
-        if 'Contents' not in s3_objects:
+        if 'Contents' not in s3_objects.keys():
             logger.warning(f"No objects found in S3 bucket {bucket_name} with prefix {prefix}.")
             break
 
