@@ -30,4 +30,6 @@ zenml model-registry register mlflow_model_registry --flavor=mlflow
 zenml stack register aws_stack -o sagemaker-orchestrator \
     -a s3_artifact_store -c ecr-registry -e mlflow_ec2_tracker -r mlflow_model_registry --set
 
+zenml orchestrator update sagemaker-orchestrator --synchronous=False # for long running pipelines (eg: training)
+
 echo "Successfully created stack"

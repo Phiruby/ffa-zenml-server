@@ -13,7 +13,7 @@ import boto3
 
 logger = get_logger(__name__)
 
-@step(enable_cache=True)
+@step(enable_cache=False)
 def get_image_batch_np_array(
     food_data_path: str,
     bucket_name: str = "foodforall-zenml-artifact-store"
@@ -117,7 +117,12 @@ def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str) -
             labels: list of int, where each int is the label of the image
     '''
     s3_client = boto3.client('s3')
+    if bucket_path.startswith('s3://'):
+        bucket_path = bucket_path[5:]  # remove 's3://'
+        bucket_path = bucket_path[bucket_path.find('/')+1:]  # remove everything till the first '/' 
+
     prefix = os.path.join(bucket_path, subfolder)
+    prefix += '/' # add a slash because s3 is like that
     logger.info("Prefix is "+str(prefix))
 
     images_list = []
@@ -137,6 +142,7 @@ def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str) -
         
         if 'Contents' not in s3_objects.keys():
             logger.warning(f"No objects found in S3 bucket {bucket_name} with prefix {prefix}.")
+            logger.info("S3 result keys are: "+str(s3_objects.keys()))
             break
 
         for s3_object in s3_objects['Contents']:
