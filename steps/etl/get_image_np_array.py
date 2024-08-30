@@ -37,14 +37,12 @@ def get_image_batch_np_array(
     if artifact_store and artifact_store.flavor == "s3": # if s3 artifact store, save in s3
         logger.info("S3 artifact store found. Reading Images from S3.")
         
-        train_df = convert_to_np_array_s3(bucket_name, food_data_path, 'training')
-        test_df = convert_to_np_array_s3(bucket_name, food_data_path, 'evaluation')
+        train_path = convert_to_np_array_s3(bucket_name, food_data_path, 'training')
+        test_path = convert_to_np_array_s3(bucket_name, food_data_path, 'evaluation')
         logger.info("Finished converting images from S3 to np arrays.")
         # Save the npz files to S3
         s3_upload_path = "s3://{}/{}".format(bucket_name, "image_np_arrays")
         logger.info("Uploading npz file to S3. S3 upload path is "+str(s3_upload_path))
-        train_path = save_npz_to_s3(bucket_name, s3_upload_path, "train_image_np_array.npz", train_df)
-        test_path = save_npz_to_s3(bucket_name, s3_upload_path, "test_image_np_array.npz", test_df)
     
     else: 
         training_images_path = os.path.join(food_data_path, 'training')
@@ -57,7 +55,6 @@ def get_image_batch_np_array(
         train_df = convert_to_np_array(training_images_path)
         test_df = convert_to_np_array(testing_images_path)
         logger.info("Got image np arrays... Now returning train and test data frames")
-        logger.info("Types are (train and test df respectively) "+str(type(train_df))+" And "+str(type(test_df)))
 
         train_path = os.path.join(food_data_path, "train_image_np_array.npz")
         test_path = os.path.join(food_data_path, "test_image_np_array.npz")
@@ -102,9 +99,10 @@ def convert_to_np_array(images_folder_path: str) -> pd.DataFrame:
     df = pd.DataFrame({"images": images_list, "labels": labels_list})
     return df
 
-def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str) -> pd.DataFrame:
+def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str, batch_size: int = 32) -> str:
     '''
-    Returns the training data from S3 as a pd DataFrame of np arrays.
+    Process S3 images in batches.
+    Returns the URI to npz file.
     ---
     Args:
         bucket_name: str - The name of the S3 bucket containing the images.
@@ -118,17 +116,17 @@ def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str) -
     '''
     s3_client = boto3.client('s3')
     if bucket_path.startswith('s3://'):
-        bucket_path = bucket_path[5:]  # remove 's3://'
-        bucket_path = bucket_path[bucket_path.find('/')+1:]  # remove everything till the first '/' 
+        bucket_path = bucket_path[5:]
+        bucket_path = bucket_path[bucket_path.find('/')+1:]
 
-    prefix = os.path.join(bucket_path, subfolder)
-    prefix += '/' # add a slash because s3 is like that
-    logger.info("Prefix is "+str(prefix))
+    prefix = os.path.join(bucket_path, subfolder) + '/'
 
-    images_list = []
-    labels_list = []
+    s3_output_key = f"{bucket_path}/{subfolder}_image_np_array.npz"
+    s3_output_path = f"s3://{bucket_name}/{s3_output_key}"
+    
+
+    all_files = []
     continuation_token = None
-    total_files = 0
 
     while True:
         list_params = {
@@ -140,57 +138,51 @@ def convert_to_np_array_s3(bucket_name: str, bucket_path: str, subfolder: str) -
 
         s3_objects = s3_client.list_objects_v2(**list_params)
         
-        if 'Contents' not in s3_objects.keys():
-            logger.warning(f"No objects found in S3 bucket {bucket_name} with prefix {prefix}.")
-            logger.info("S3 result keys are: "+str(s3_objects.keys()))
+        if 'Contents' not in s3_objects:
             break
 
-        for s3_object in s3_objects['Contents']:
-            s3_key = s3_object['Key']
-            if not s3_key.endswith(('.jpg', '.png', '.jpeg')):  # Adjust file extensions as needed
-                continue
+        all_files.extend([obj['Key'] for obj in s3_objects['Contents'] if obj['Key'].endswith(('.jpg', '.png', '.jpeg'))])
 
-            if total_files % 200 == 0:
-                logger.info(f"Converting image {total_files + 1}: {s3_key}")
-
-            # Download the image from S3
-            s3_response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-            img_data = s3_response['Body'].read()
-            img = Image.open(io.BytesIO(img_data)).convert('RGB')
-            img_np = np.array(img)
-            images_list.append(img_np)
-
-            # Assign a label based on filename
-            if os.path.basename(s3_key).startswith('0'):
-                labels_list.append(0)
-            elif os.path.basename(s3_key).startswith('1'):
-                labels_list.append(1)
-
-            total_files += 1
-
-        # Check if there are more objects to retrieve
-        if s3_objects.get('IsTruncated'):
-            logger.info("Found more objects to read... Continuing with pagination")
-            continuation_token = s3_objects['NextContinuationToken']
-        else:
-            logger.info("Finished reading all objects... Breaking")
+        if not s3_objects.get('IsTruncated'):
             break
+        continuation_token = s3_objects['NextContinuationToken']
 
-    df = pd.DataFrame({"images": images_list, "labels": labels_list})
-    return df
+    total_batches = len(all_files) // batch_size + (1 if len(all_files) % batch_size else 0)
 
-def save_npz_to_s3(bucket_name: str, bucket_path: str, filename: str, df: pd.DataFrame) -> str:
-    '''
-    Saves the numpy arrays from the DataFrame to S3 as an .npz file.
-    '''
-    s3_client = boto3.client('s3')
-    s3_key = os.path.join(bucket_path, f"{filename}.npz")
+    all_images = []
+    all_labels = []
 
-    # Save to a local temporary npz file first
+    for batch in range(total_batches):
+        logger.info(f"Processing batch {batch+1}/{total_batches}")
+        start_idx = batch * batch_size
+        end_idx = min((batch + 1) * batch_size, len(all_files))
+        
+        batch_files = all_files[start_idx:end_idx]
+        images_list = []
+        labels_list = []
+
+        for s3_key in batch_files:
+            try:
+                s3_response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+                img_data = s3_response['Body'].read()
+                img = Image.open(io.BytesIO(img_data)).convert('RGB')
+                img_np = np.array(img)
+                images_list.append(img_np)
+                labels_list.append(0 if os.path.basename(s3_key).startswith('0') else 1)
+            except Exception as e:
+                logger.error(f"Error processing file {s3_key}: {str(e)}")
+
+        all_images.extend(images_list)
+        all_labels.extend(labels_list)
+
+    logger.info("Saving processed data to NPZ file in S3")
+    
+    # Save the NPZ file to S3
     with io.BytesIO() as buffer:
-        np.savez(buffer, images=df['images'].values, labels=df['labels'].values)
+        np.savez_compressed(buffer, images=np.array(all_images), labels=np.array(all_labels))
         buffer.seek(0)
-        s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=buffer)
+        s3_client.put_object(Bucket=bucket_name, Key=s3_output_key, Body=buffer.getvalue())
 
-    s3_uri = f"s3://{bucket_name}/{s3_key}"
-    return s3_uri
+    logger.info(f"NPZ file saved to {s3_output_path}")
+
+    return s3_output_path
